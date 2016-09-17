@@ -1,14 +1,27 @@
-# MAS
-Script to analyse intensity and area of muscle attachment sites
+# Puncta
+Script to quantify protein accumulation in puncta
 
-Files should be labelled by consequent numbers starting with 1 (i.e. 1,2,3,4...)
+This version doesn't stretch the histogram before doing the thresholding
+It thresholds a control sample (control images) and obtain the average
+theshold from them, so that puncta cover a defined area, then applies the
+same threshold to a second sample (experiment images).
 
-Output file All.csv contains information about every individual
-attachment site, whereas Average.csv contains avarage values per embryo.
-The output files will be saved in the same folder as image files.
+It can calculate protein accumulation either using a binary mask from 
+Packing Analyser, or the entiry field. It can be selected at the beginning
+which option to use.
 
-Embryos should be imaged being aligned along X-axis (with respect to 
-anterior-posterior axis)
+After setting the parameters it asks to choose first a folder with
+control samples, which should contain tifs_8bit (with segmented images),
+and tifs_original (with original non-modified projections) subfolders.
+Then, it asks to select a folder with experiment images, which should
+be organised in the same way as the folder with control images. In both
+folders images should be named by sequencial numbers starting with 1
+(i.e. 1,2,3,4...). The files do not have to be '.tif' as the script
+uses bfopen to open images. The format can be selected at the beginning.
 
-The script should work on any type of images, but I have tested only on
-Olympus Upright .oib files.
+Ouputs: the script record settings, which were used for analysis in
+"settings. txt" file in the folder with control images. In the same
+folder it records "summary_control.csv" file with information about
+average punctas measurements from the control images. Similar information
+from experiment images is recordered as "summary_experiment.csv" in the
+folder that contains experiment images.
