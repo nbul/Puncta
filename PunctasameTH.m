@@ -205,10 +205,13 @@ writetable(output,'summary_control.csv');
 cd(tif16_dir_exp);
 exp_files = dir(['*',fileext]);
 
-clear output;
+clear output filenames;
+filenames = 1:numel(exp_files);
 
 experiment;
-
+TA = zeros(numel(exp_files),1) + target_area;
+AT = zeros(numel(exp_files),1) + area_tolerance;
+TN = zeros(numel(exp_files),1) + thresh_new;
 if  strcmp(usemask, 'Yes')
     output = [num2cell(filenames'), num2cell(TA), num2cell(AT),...
         num2cell(TN), num2cell(Pareatotal_av), num2cell(unmasked_total), num2cell(relative_puncta_area2),...
