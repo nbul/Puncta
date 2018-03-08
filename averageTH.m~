@@ -34,13 +34,13 @@ for i = 1:numel(control_files)
     
     % *** FILTERIMAGE: clean-up image ***
     % 2) Gentle Gaussian smoothing to even out the noise:
-    filteredimage = imfilter(originalimage, fspecial('Gaussian', 5, 0.75));
+    filteredimage = imfilter(originalimage, fspecial('Gaussian', 3, 0.75));
     % 3) Median filter to further reduce noise while preserving edges:
-    filteredimage = medfilt2(filteredimage, [5 5]);
+    filteredimage = medfilt2(filteredimage, [3 3]);
     
     % *** Apply membrane mask, if specified, otherwise mask just "black" regions ***
     
-   if  strcmp(usemask, 'Borders')
+    if  strcmp(usemask, 'Borders')
         
         % Specify path for Packing Analyzer hand-corrected membrane mask.
         maskpath = [tif8_dir_control, '/', num2str(i), '/handCorrection.tif'];
@@ -59,29 +59,7 @@ for i = 1:numel(control_files)
         mask = imdilate(skel, strel('disk', maskradius, 0));
         % mask filtered image, n.b. converts to binary
         unmasked_regions = filteredimage & mask;
-        
-    elseif strcmp(usemask, 'Cytoplasm')
-      maskpath = [tif8_dir_control, '/', num2str(i), '/handCorrection.tif'];
-        
-        % Need open membrane skeleton file and process before use
-        skel = imread(maskpath);
-        % dilate, erode to clean up. "radius" is half final thickness
-        skel = imcrop(skel(:,:,1), rect); %crop edges of mask file
-        skel = padarray(skel,[border, border]); %add border to mask fileskel = imclearborder(skel);
-        skel = imclearborder(skel);
-        skel = imdilate(skel, strel('disk', maskradius, 0));
-        skel = bwmorph(skel, 'diag');
-        skel = bwmorph(skel, 'thin', Inf);
-        skel = bwmorph(skel, 'spur', Inf);
-        % final dilation to create membrane mask
-        mask = imdilate(skel, strel('disk', maskradius, 0));
-        mask = imcomplement(mask);
-        mask = imclearborder(mask);
-        mask = imerode(mask, strel('disk', 4, 0));
-        mask = bwareaopen(mask, 50);
-        % mask filtered image, n.b. converts to binary
-        unmasked_regions = filteredimage & mask;
-    else    
+    else
         % mask off any completely black regions (assuming image has been cropped)
         unmasked_regions = imbinarize(filteredimage,0);
         
@@ -106,11 +84,13 @@ for i = 1:numel(control_files)
     unmasked_area = cell2mat(struct2cell(unmasked_area));
     unmasked_total(i) = sum(unmasked_area(:));
     
+    
+    
     while up_or_down ~= 0
         
         % ** Apply current threshold, mask and get relative puncta area **
         
-        binaryimage = imbinarize(filteredimage, thresh(i));
+        
         
         binaryimage = binaryimage & unmasked_regions;
         

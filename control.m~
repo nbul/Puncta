@@ -10,8 +10,6 @@ Pmin_av = zeros(numel(control_files),1);
 Pminstd_av = zeros(numel(control_files),1);
 Pareatotal_av = zeros(numel(control_files),1);
 Pn = zeros(numel(control_files),1);
-Pn2 = zeros(numel(control_files),1);
-PPC = zeros(numel(control_files),1);
 
 Carea_av = zeros(numel(control_files),1);
 Careastd_av = zeros(numel(control_files),1);
@@ -158,7 +156,7 @@ for i=1:numel(control_files)
         Pmin_av(i) = mean(Pmin);
         
         Pn(i) = PUNCTA.NumObjects;
-        Pn2(i) = PUNCTA.NumObjects/unmasked_total(i);
+        
         % *** Cytoplasm stats: ***
         
         CYTO = bwconncomp(cyto);
@@ -210,7 +208,7 @@ for i=1:numel(control_files)
         Mn(i) = MEMBRANE.NumObjects;
         
         Mmean_nonpuncta(i) = ((Marea_av(i) * Mmean_av(i)) - (Pareatotal_av(i) * Pmean_av(i)))/(Marea_av(i)-Pareatotal_av(i));
-        PPC(i) = Pn(i)/Mn(i);
+        
     else
         
         % Get Puncta stats
@@ -234,12 +232,10 @@ for i=1:numel(control_files)
         Pmin_av(i) = mean(Pmin);
         
         Pn(i) = PUNCTA.NumObjects;
-        Pn2(i) = PUNCTA.NumObjects/unmasked_total(i);
         
     end
     
     % *** Add stats to output array, including filename and data on threshold ***
-    
     relative_puncta_area2(i) = Pareatotal/unmasked_total(i);
     tolerance_achieved(i) = abs(target_area - relative_puncta_area2(i));
     

@@ -15,6 +15,8 @@ Pmin_av = zeros(numel(exp_files),1);
 Pminstd_av = zeros(numel(exp_files),1);
 Pareatotal_av = zeros(numel(exp_files),1);
 Pn = zeros(numel(exp_files),1);
+Pn2 = zeros(numel(exp_files),1);
+PPC = zeros(numel(control_files),1);
 
 Carea_av = zeros(numel(exp_files),1);
 Careastd_av = zeros(numel(exp_files),1);
@@ -71,17 +73,15 @@ for i=1:numel(exp_files)
     
     % *** Apply membrane mask, if specified, otherwise mask just "black" regions ***
     
-    if  strcmp(usemask, 'Yes')
+    if  strcmp(usemask, 'Borders')
         
         % Specify path for Packing Analyzer hand-corrected membrane mask.
-        maskpath = [tif8_dir_exp, '/', num2str(i), '/handCorrection.png'];
+        maskpath = [tif8_dir_exp, '/', num2str(i), '/handCorrection.tif'];
         
         % Need open membrane skeleton file and process before use
         skel = imread(maskpath);
         % dilate, erode to clean up. "radius" is half final thickness
-        skel = rgb2gray(skel);
-        skel = logical(skel);
-        skel = imcrop(skel, rect); %crop edges of mask file
+        skel = imcrop(skel(:,:,1), rect); %crop edges of mask file
         skel = padarray(skel,[border, border]); %add border to mask fileskel = imclearborder(skel);
         skel = imclearborder(skel);
         skel = imdilate(skel, strel('disk', maskradius, 0));
@@ -93,10 +93,30 @@ for i=1:numel(exp_files)
         % mask filtered image, n.b. converts to binary
         unmasked_regions = filteredimage & mask;
         
-    else
+    elseif strcmp(usemask, 'Cytoplasm')
+        maskpath = [tif8_dir_exp, '/', num2str(i), '/handCorrection.tif'];
         
+        % Need open membrane skeleton file and process before use
+        skel = imread(maskpath);
+        % dilate, erode to clean up. "radius" is half final thickness
+        skel = imcrop(skel(:,:,1), rect); %crop edges of mask file
+        skel = padarray(skel,[border, border]); %add border to mask fileskel = imclearborder(skel);
+        skel = imclearborder(skel);
+        skel = imdilate(skel, strel('disk', maskradius, 0));
+        skel = bwmorph(skel, 'diag');
+        skel = bwmorph(skel, 'thin', Inf);
+        skel = bwmorph(skel, 'spur', Inf);
+        % final dilation to create membrane mask
+        mask = imdilate(skel, strel('disk', maskradius, 0));
+        mask = imcomplement(mask);
+        mask = imclearborder(mask);
+        mask = imerode(mask, strel('disk', 4, 0));
+        mask = bwareaopen(mask, 50);
+        % mask filtered image, n.b. converts to binary
+        unmasked_regions = filteredimage & mask;
+    else    
         % mask off any completely black regions (assuming image has been cropped)
-        unmasked_regions = im2bw(filteredimage,0);
+        unmasked_regions = imbinarize(filteredimage,0);
         
     end
     
@@ -106,21 +126,25 @@ for i=1:numel(exp_files)
     unmasked_area = cell2mat(struct2cell(unmasked_area));
     unmasked_total(i) = sum(unmasked_area(:));
     
-    
-    binaryimage = im2bw(filteredimage, thresh_new);
-    binaryimage = binaryimage & unmasked_regions;
-    
-    % Next lines tidy up remaining puncta map and remove objects below minobjectsize
-    binaryimage = bwmorph(binaryimage, 'bridge');
-    binaryimage = bwmorph(binaryimage, 'clean');
-    binaryimage = imfill(binaryimage, 'holes');
-    binaryimage = bwmorph(binaryimage, 'close');
-    binaryimage = imfill(binaryimage, 'holes');
-    binaryimage = bwareaopen(binaryimage, minobjectsize);
+    if strcmp(usemask, 'Borders') || strcmp(usemask, 'No mask')
+        binaryimage = imbinarize(filteredimage, thresh_new);
+        binaryimage = binaryimage & unmasked_regions;
+        
+        % Next lines tidy up remaining puncta map and remove objects below minobjectsize
+        binaryimage = bwmorph(binaryimage, 'bridge');
+        binaryimage = bwmorph(binaryimage, 'clean');
+        binaryimage = imfill(binaryimage, 'holes');
+        binaryimage = bwmorph(binaryimage, 'close');
+        binaryimage = imfill(binaryimage, 'holes');
+        binaryimage = bwareaopen(binaryimage, minobjectsize);
+    else
+        binaryimage = imbinarize(im2double(filteredimage), 'adaptive');
+        binaryimage = binaryimage .* unmasked_regions;
+    end
     
     % *** Get Puncta Stats ***
     
-    if  strcmp(usemask, 'Yes')
+    if   strcmp(usemask, 'Borders') || strcmp(usemask, 'Cytoplasm')
         
         % Create inverse cytoplasmic mask
         cyto = imcomplement(unmasked_regions);
@@ -147,6 +171,7 @@ for i=1:numel(exp_files)
         Pmin_av(i) = mean(Pmin);
         
         Pn(i) = PUNCTA.NumObjects;
+        Pn2(i) = PUNCTA.NumObjects/unmasked_total(i);
         
         % *** Cytoplasm stats: ***
         
@@ -199,7 +224,8 @@ for i=1:numel(exp_files)
         Mn(i) = MEMBRANE.NumObjects;
         
         Mmean_nonpuncta(i) = ((Marea_av(i) * Mmean_av(i)) - (Pareatotal_av(i) * Pmean_av(i)))/(Marea_av(i)-Pareatotal_av(i));
-        
+        PPC(i) = Pn(i)/Mn(i);
+
     else
         
         % Get Puncta stats
@@ -223,7 +249,7 @@ for i=1:numel(exp_files)
         Pmin_av(i) = mean(Pmin);
         
         Pn(i) = PUNCTA.NumObjects;
-        
+        Pn2(i) = PUNCTA.NumObjects/unmasked_total(i);
     end
     
     % *** Add stats to output array, including filename and data on threshold ***
